@@ -100,7 +100,7 @@ def make_dependency_check(descr_path, module):
 %(cmake)s
 endif(DEFINED %(PKGNAME)s_INTERNAL)""" % descr
         else:
-            descr["on_failure"] = """message("%s not found")\nfile(WRITE "${CMAKE_BINARY_DIR}/build_info/%s" "ok=False")""" % (
+            descr["on_failure"] = """message("%s not found")\nfile(WRITE "${CMAKE_BINARY_DIR}/build/imp-build/build_info/%s" "ok=False")""" % (
                 descr['full_name'], name)
             descr["on_setup"] = ""
         dep_template.write(filename, descr)
@@ -110,12 +110,12 @@ endif(DEFINED %(PKGNAME)s_INTERNAL)""" % descr
 def get_sources(module, subdir, pattern):
     matching = tools.get_glob([os.path.join(module.path, subdir, pattern),
                                os.path.join(module.path, subdir, "*", pattern)])
-    return "\n".join(["${CMAKE_SOURCE_DIR}/%s"
+    return "\n".join(["${CMAKE_SOURCE_DIR}/build/imp-src/%s"
                      % tools.to_cmake_path(x) for x in matching])
 
 def get_app_sources(path, patterns, filt=lambda x:True):
     matching = tools.get_glob([os.path.join(path, x) for x in patterns])
-    return ["${CMAKE_SOURCE_DIR}/%s" % tools.to_cmake_path(x) \
+    return ["${CMAKE_SOURCE_DIR}/build/imp-src/%s" % tools.to_cmake_path(x) \
             for x in matching if filt(x)]
 
 def get_dep_merged(all_deps, name):
@@ -153,21 +153,21 @@ def setup_module(finder, module, tools_dir, extra_include, extra_swig,
     g = tools.CMakeFileGenerator()
     if len(checks) > 0:
         g.write(os.path.join(module.path, 'compiler', 'CMakeLists.txt'),
-                "\n".join(["include(${CMAKE_SOURCE_DIR}/%s)\n" %
+                "\n".join(["include(${CMAKE_SOURCE_DIR}/build/imp-src/%s)\n" %
                                tools.to_cmake_path(x) for x in checks]))
         contents.append(
-            "add_subdirectory(${CMAKE_SOURCE_DIR}/%s/compiler)" %
+            "add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src/%s/compiler)" %
             tools.to_cmake_path(module.path))
     if len(deps) > 0:
         g.write(os.path.join(module.path, 'dependency', 'CMakeLists.txt'),
-                "\n".join(["include(${CMAKE_SOURCE_DIR}/%s)" %
+                "\n".join(["include(${CMAKE_SOURCE_DIR}/build/imp-src/%s)" %
                                tools.to_cmake_path(x) for x in deps]))
         contents.append(
-            "add_subdirectory(${CMAKE_SOURCE_DIR}/%s/dependency)" %
+            "add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src/%s/dependency)" %
             tools.to_cmake_path(module.path))
     local = os.path.join(module.path, "Setup.cmake")
     if os.path.exists(local):
-        contents.append("include(${CMAKE_SOURCE_DIR}/%s)"
+        contents.append("include(${CMAKE_SOURCE_DIR}/build/imp-src/%s)"
                         % tools.to_cmake_path(local))
 
     values = {"name": module.name, "extra_include": extra_include,
@@ -218,7 +218,7 @@ def setup_module(finder, module, tools_dir, extra_include, extra_swig,
 
     local = os.path.join(module.path, "Build.cmake")
     if os.path.exists(local):
-        values["custom_build"] = "include(${CMAKE_SOURCE_DIR}/%s)\n" \
+        values["custom_build"] = "include(${CMAKE_SOURCE_DIR}/build/imp-src/%s)\n" \
                                  % tools.to_cmake_path(local)
     else:
         values["custom_build"] = ""
@@ -244,12 +244,12 @@ def setup_module(finder, module, tools_dir, extra_include, extra_swig,
     else:
         values["build_dir"] = ""
     values["disabled_status"] = "FATAL_ERROR" if required else "STATUS"
-    values["subdirs"] = """add_subdirectory(${CMAKE_SOURCE_DIR}%s/src)
-add_subdirectory(${CMAKE_SOURCE_DIR}%s/test)
-add_subdirectory(${CMAKE_SOURCE_DIR}%s/examples)
-add_subdirectory(${CMAKE_SOURCE_DIR}%s/benchmark)
-add_subdirectory(${CMAKE_SOURCE_DIR}%s/bin)
-add_subdirectory(${CMAKE_SOURCE_DIR}%s/utility)""" % ((topdir,) * 6)
+    values["subdirs"] = """add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src%s/src)
+add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src%s/test)
+add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src%s/examples)
+add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src%s/benchmark)
+add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src%s/bin)
+add_subdirectory(${CMAKE_SOURCE_DIR}/build/imp-src%s/utility)""" % ((topdir,) * 6)
 
     cmakelists = os.path.join(module.path, "CMakeLists.txt")
     if finder.one_module or standalone_cmake(cmakelists):
@@ -285,7 +285,7 @@ def main():
     mf = tools.ModulesFinder(source_dir='', external_dir=options.build_dir,
                              module_name=options.module_name)
     tools_dir = options.tools_dir if options.tools_dir \
-                                  else '${CMAKE_SOURCE_DIR}/tools'
+                                  else '${CMAKE_SOURCE_DIR}/build/imp-src/tools'
     extra_include = ' "--include=%s"' % options.include \
                     if options.include else ""
     extra_swig = ''.join(' "--swig_include=%s"' % s
